@@ -202,7 +202,7 @@ Vous avez une fonction video_name: str -> comic_names: list[str] qui marche<br/>
 ### Après 1 heure
 
 Vous avez un jeu de données pour évaluer votre fonction<br/>
-**-1 point si non fait après 30 minutes**
+**-1 point si non fait après 1 heure**
 
 # A rendre
 
