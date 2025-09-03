@@ -9,6 +9,7 @@ dependencies = [
     "evaluate>=0.4.5",
     "jupyter>=1.1.1",
     "nltk>=3.9.1",
+    "openai>=1.105.0",
     "pandas>=2.3.2",
     "scikit-learn>=1.7.1",
     "seqeval>=1.2.2",
