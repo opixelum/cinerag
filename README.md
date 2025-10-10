@@ -287,7 +287,7 @@ Dans ce TD, nous allons coder un assistant virtuel, capable de transformer:
 en un json:
 
 ```
-
+{
    "job": "send_message",
    "receiver": "the python teacher",
    "content": "when is the next class?",
@@ -304,6 +304,7 @@ en un json:
     "task": "ask_RAG",
     "reply": "asked_to_rag: Does the React course cover the use of hooks?",
 }
+```
 
 ## Part 1: Parser une query pour envoyer un message
 
