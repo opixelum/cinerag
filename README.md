@@ -375,4 +375,8 @@ Exemples:
 }
 ```
 
-A rendre: un fichier virtual_assistant.py avec une fonction "call_virtual_assistant(user_query: str) -> dict"
+# A rendre
+
+- Vendredi 10 octobre, 23:59: le nom de votre modèle HuggingFace sequence -> {"ask_RAG" ou "send_message"}
+- Dimanche 12 octobre, 23:59: le nom de votre modèle HuggingFace sentence -> label ["person", "content"] by token
+- Dimanche 26 octobre, 23:59: un fichier virtual_assistant.py avec une fonction "call_virtual_assistant(user_query: str) -> dict"
