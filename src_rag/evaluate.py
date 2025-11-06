@@ -9,7 +9,7 @@ from tqdm import tqdm
 from time import sleep
 import yaml
 
-from src_rag import models
+import models
 
 from FlagEmbedding import FlagModel
 
