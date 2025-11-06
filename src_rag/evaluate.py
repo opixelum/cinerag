@@ -15,11 +15,11 @@ from FlagEmbedding import FlagModel
 
 CONF = yaml.safe_load(open("config.yml"))
 
-FOLDER = Path("data") / "raw" / "movies" / "wiki"
+FOLDER = Path("data") / "wiki"
 FILENAMES = [
     FOLDER / title for title in ["Inception.md", "The Dark Knight.md", "Deadpool.md", "Fight Club.md", "Pulp Fiction.md", "Titanic.md", "Avengers: Infinity War.md", "Seven Samurai.md"]
 ]
-DF = pd.read_csv("data/raw/movies/questions.csv", sep=";") 
+DF = pd.read_csv("data/questions.csv", sep=";") 
 
 ENCODER = SentenceTransformer('all-MiniLM-L6-v2')
 
