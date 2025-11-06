@@ -8,13 +8,16 @@ from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
 from time import sleep
 import yaml
+from dotenv import load_dotenv
 
 import models
 
 from FlagEmbedding import FlagModel
 
+load_dotenv()
 with open("config.yml", encoding="utf-8") as _cfg_file:
-    CONF = yaml.safe_load(_cfg_file)
+    _raw = os.path.expandvars(_cfg_file.read())
+CONF = yaml.safe_load(_raw)
 
 FOLDER = Path("data") / "wiki"
 FILENAMES = [

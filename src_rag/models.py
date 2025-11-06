@@ -4,11 +4,15 @@ import re
 import tiktoken
 import openai
 import yaml
+import os
+from dotenv import load_dotenv
 
 from FlagEmbedding import FlagModel
 
+load_dotenv()
 with open("config.yml", encoding="utf-8") as _cfg_file:
-    CONF = yaml.safe_load(_cfg_file)
+    _raw = os.path.expandvars(_cfg_file.read())
+CONF = yaml.safe_load(_raw)
 
 # Initialisation du client OpenAI avec l'API Groq
 CLIENT = openai.OpenAI(
