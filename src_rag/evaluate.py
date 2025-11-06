@@ -9,24 +9,21 @@ from tqdm import tqdm
 from time import sleep
 import yaml
 
-from src_rag import models
+import models
 
 from FlagEmbedding import FlagModel
 
-# Chargement de la configuration depuis le fichier YAML
-CONF = yaml.safe_load(open("config.yml"))
+with open("config.yml", encoding="utf-8") as _cfg_file:
+    CONF = yaml.safe_load(_cfg_file)
 
-# Chemin vers le dossier contenant les fichiers markdown des films
-FOLDER = Path("data") / "raw" / "movies" / "wiki"
+FOLDER = Path("data") / "wiki"
 FILENAMES = [
     FOLDER / title for title in [
         "Inception.md", "The Dark Knight.md", "Deadpool.md", "Fight Club.md", 
         "Pulp Fiction.md", "Titanic.md", "Avengers: Infinity War.md", "Seven Samurai.md"
     ]
 ]
-
-# Chargement des questions pour l'évaluation
-DF = pd.read_csv("data/raw/movies/questions.csv", sep=";") 
+DF = pd.read_csv("data/questions.csv", sep=";") 
 
 # Modèle d'encodage sémantique pour mesurer la similarité
 ENCODER = SentenceTransformer('all-MiniLM-L6-v2')
