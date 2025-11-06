@@ -21,8 +21,10 @@ tokenizer = tiktoken.get_encoding("cl100k_base")
 
 
 def get_model(config):
-    # Instancie et retourne le modèle RAG avec la configuration donnée
-    return RAG(**config["model"])
+    if config:
+        return RAG(**config.get("model", {}))
+    else:
+        return RAG()
 
 
 class RAG:
