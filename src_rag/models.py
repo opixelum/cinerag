@@ -17,7 +17,10 @@ CLIENT = openai.OpenAI(
 tokenizer = tiktoken.get_encoding("cl100k_base")
 
 def get_model(config):
-    return RAG(**config["model"])
+    if config:
+        return RAG(**config.get("model", {}))
+    else:
+        return RAG()
 
 
 class RAG:
