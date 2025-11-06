@@ -6,7 +6,8 @@ import yaml
 
 from FlagEmbedding import FlagModel
 
-CONF = yaml.safe_load(open("config.yml"))
+with open("config.yml", encoding="utf-8") as _cfg_file:
+    CONF = yaml.safe_load(_cfg_file)
 
 CLIENT = openai.OpenAI(
     base_url="https://api.groq.com/openai/v1",
@@ -35,7 +36,9 @@ class RAG:
             if filename in self._loaded_files:
                 continue
 
-            with open(filename) as f:
+            # open markdown files using utf-8 and replace invalid bytes so reading never raises
+            # UnicodeDecodeError on Windows when files contain odd bytes
+            with open(filename, encoding="utf-8", errors="replace") as f:
                 texts.append(f.read())
                 self._loaded_files.add(filename)
 
