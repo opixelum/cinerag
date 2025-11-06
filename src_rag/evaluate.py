@@ -13,7 +13,7 @@ import models
 
 from FlagEmbedding import FlagModel
 
-CONF = yaml.safe_load(open("config.yml"))
+CONF = yaml.safe_load(open("config.yml"), encoding="utf-8")
 
 FOLDER = Path("data") / "wiki"
 FILENAMES = [
