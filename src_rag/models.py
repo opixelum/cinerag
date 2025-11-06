@@ -6,6 +6,7 @@ import openai
 import yaml
 import os
 from dotenv import load_dotenv
+from utils import small2big
 
 from FlagEmbedding import FlagModel
 
@@ -32,9 +33,10 @@ def get_model(config):
 
 
 class RAG:
-    def __init__(self, chunk_size=256):
+    def __init__(self, chunk_size=256, small_window=1):
         # chunk_size : taille de découpage des textes (en tokens)
         self._chunk_size = chunk_size
+        self._small_window = small_window
         self._embedder = None                   # Embedding model (sera chargé à la demande)
         self._loaded_files = set()              # Fichiers déjà chargés pour éviter le doublon
         self._texts = []                        # Liste des textes bruts déjà chargés
@@ -141,7 +143,7 @@ class RAG:
         query_embedding = self.embed_questions([query])
         sim_scores = query_embedding @ self._corpus_embedding.T
         indexes = list(np.argsort(sim_scores[0]))[-5:]  # Top 5 plus proches
-        return [self._chunks[i] for i in indexes]
+        return [small2big(self._chunks, idx, window=self._small_window) for idx in indexes]
     
 
 def count_tokens(text: str) -> int:
