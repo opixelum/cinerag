@@ -18,7 +18,7 @@ with open("config.yml", encoding="utf-8") as _cfg_file:
 
 FOLDER = Path("data") / "wiki"
 FILENAMES = [
-    FOLDER / title for title in ["Inception.md", "The Dark Knight.md", "Deadpool.md", "Fight Club.md", "Pulp Fiction.md", "Titanic.md", "Avengers: Infinity War.md", "Seven Samurai.md"]
+    FOLDER / title for title in ["Inception.md", "The Dark Knight.md", "Deadpool.md", "Fight Club.md", "Pulp Fiction.md"]
 ]
 DF = pd.read_csv("data/questions.csv", sep=";") 
 
