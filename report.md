@@ -6,3 +6,10 @@
 - Nb chunks: 347
 - Percent correct: 0.56
 - Reply similarity: 0.64
+
+## Small2Big
+
+- MRR: 0.26
+- Nb chunks: 347
+- Percent correct: 0.78
+- Reply similarity: 0.75
