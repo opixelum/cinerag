@@ -22,3 +22,10 @@
   - Nb chunks: 352
   - Percent correct: 0.67
   - Reply similarity: 0.72
+
+- 32 tokens overlap:
+
+  - MRR: 0.18
+  - Nb chunks: 360
+  - Percent correct: 0.67
+  - Reply similarity: 0.77
