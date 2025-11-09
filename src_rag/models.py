@@ -190,7 +190,7 @@ def parse_markdown_sections(md_text: str) -> list[dict[str, str]]:
     return sections
 
 
-def chunk_markdown(md_text: str, chunk_size: int = 128, overlap: int = 32) -> list[str]:
+def chunk_markdown(md_text: str, chunk_size: int = 128, overlap: int = 40) -> list[str]:
     parsed_sections = parse_markdown_sections(md_text)
     chunks = []
 
