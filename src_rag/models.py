@@ -190,19 +190,24 @@ def parse_markdown_sections(md_text: str) -> list[dict[str, str]]:
     return sections
 
 
-def chunk_markdown(md_text: str, chunk_size: int = 128) -> list[dict]:
-    # Découpe le texte markdown analysé en chunks de taille maximum chunk_size (en tokens)
+def chunk_markdown(md_text: str, chunk_size: int = 128, overlap: int = 40) -> list[str]:
     parsed_sections = parse_markdown_sections(md_text)
     chunks = []
 
     for section in parsed_sections:
         tokens = tokenizer.encode(section["content"])
-        # Créée des sous-listes de tokens d'une taille maximale chunk_size
-        token_chunks = [tokens[i:i + chunk_size] for i in range(0, len(tokens), chunk_size) if tokens[i:i + chunk_size]]
+        i = 0
 
-        for token_chunk in token_chunks:
-            # Décode chaque chunk de tokens en texte
+        while i < len(tokens):
+            # Calculate end index ensuring we don't exceed the total number of tokens
+            end = min(i + chunk_size, len(tokens))
+            token_chunk = tokens[i:end]
             chunk_text = tokenizer.decode(token_chunk)
             chunks.append(chunk_text)
+
+            # Move chunk start forward (chunk_size - overlap) each time for overlap
+            if end == len(tokens):
+                break  # Avoid duplicating last bit if at end
+            i += chunk_size - overlap  # In tokens
 
     return chunks
