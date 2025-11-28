@@ -1,5 +1,5 @@
 from pathlib import Path
-import mlflow
+from contextlib import nullcontext
 import numpy as np
 import os
 import pandas as pd
@@ -12,7 +12,26 @@ from dotenv import load_dotenv
 
 import models
 
-from FlagEmbedding import FlagModel
+try:
+    import mlflow
+except ModuleNotFoundError:  # pragma: no cover - fallback pour environnement léger
+    class _MlflowStub:
+        def set_experiment(self, *args, **kwargs):
+            print("[mlflow] Non disponible, métriques non loggées.")
+
+        def start_run(self, *args, **kwargs):
+            return nullcontext()
+
+        def log_table(self, *args, **kwargs):
+            pass
+
+        def log_metrics(self, *args, **kwargs):
+            pass
+
+        def log_dict(self, *args, **kwargs):
+            pass
+
+    mlflow = _MlflowStub()
 
 load_dotenv()
 with open("config.yml", encoding="utf-8") as _cfg_file:
@@ -102,18 +121,15 @@ def evaluate_reply(rag, filenames, df):
         Dictionnaire avec les scores et tableau de résultats
     """
     rag.load_files(filenames)
+    df = df.copy()
 
     replies = []
     for question in tqdm(df["question"]):
         replies.append(rag.reply(question))
-        # On dort pour ne pas surcharger l'API Groq/OpenAI
         sleep(2)
 
-    # On ajoute les réponses générées au DataFrame
     df["reply"] = replies
-    # Calcul de la similarité sémantique entre réponses attendues et générées
     df["sim"] = df.apply(lambda row: calc_semantic_similarity(row["reply"], row["expected_reply"]), axis=1)
-    # Détermination de la correction à partir d'un seuil
     df["is_correct"] = df["sim"] > .7
 
     return {
@@ -133,9 +149,9 @@ def evaluate_retrieval(rag, filenames, df_question):
         Dictionnaire avec le Mean Reciprocal Rank (MRR) et autres infos
     """
     rag.load_files(filenames)
+    df_question = df_question.copy()
     ranks = []
-    for _, row in df_question.iterrows():
-        # Sélection des chunks de contexte pour chaque question
+    for _, row in tqdm(df_question.iterrows(), total=len(df_question), desc="Retrieval"):
         chunks = rag._get_context(row.question)
         try:
             # On cherche si le texte cible est bien dans l'un des chunks sélectionnés
@@ -143,12 +159,11 @@ def evaluate_retrieval(rag, filenames, df_question):
         except StopIteration:
             # Si pas trouvé, rank = 0
             rank = 0
-
         ranks.append(rank)
         
     df_question["rank"] = ranks
-            
     mrr = np.mean([0 if r == 0 else 1 / r for r in ranks])
+    print(f"  MRR: {mrr:.4f} | Chunks: {len(rag.get_chunks())}")
 
     return {
         "mrr": mrr,
@@ -217,10 +232,29 @@ def calc_semantic_similarity(generated_answer: str, reference_answer: str) -> fl
     similarity = cosine_similarity(generated_embedding, reference_embedding)[0][0]
     return float(similarity)
 
+def run_full_evaluation(config):
+    """Evalue retrieval + reply et affiche tous les scores."""
+    rag = models.get_model(config)
+    rag.load_files(FILENAMES)
+    ret = evaluate_retrieval(rag, FILENAMES, DF.dropna())
+    rep = evaluate_reply(rag, FILENAMES, DF.dropna())
+    print(f"  Reply Sim: {rep['reply_similarity']:.4f} | Correct: {rep['percent_correct']:.2%}")
+    scores = {"mrr": ret["mrr"], "nb_chunks": ret["nb_chunks"],
+              "reply_similarity": rep["reply_similarity"], "percent_correct": rep["percent_correct"]}
+    _push_mlflow_result({**scores, "df_result": ret["df_result"]}, config, str(config["model"]))
+
 if __name__ == "__main__":
-    # Configuration du modèle pour le découpage des textes
-    model_config = {"chunk_size": 512}
-    # Lancer une évaluation retrieval ou reply selon besoin
-    # run_evaluate_retrieval({"model": model_config})
-    run_evaluate_reply({"model": model_config})
+    configs = [
+        {"chunk_method": "markdown", "chunk_size": 256, "embedder_type": "flag_bge"},
+        {"chunk_method": "hierarchy_cards", "chunk_size": 256, "embedder_type": "flag_bge"},
+        {"chunk_method": "coarse_to_fine", "chunk_size": 320, "embedder_type": "flag_bge"},
+        {"chunk_method": "semantic_sentences", "chunk_size": 200, "embedder_type": "flag_bge"},
+        {"chunk_method": "markdown", "chunk_size": 256, "embedder_type": "e5_small"},
+        {"chunk_method": "hierarchy_cards", "chunk_size": 256, "embedder_type": "e5_small"},
+        {"chunk_method": "coarse_to_fine", "chunk_size": 320, "embedder_type": "e5_small"},
+        {"chunk_method": "semantic_sentences", "chunk_size": 200, "embedder_type": "e5_small"},
+    ]
+    for cfg in configs:
+        print(f"\n=== {cfg} ===")
+        run_full_evaluation({"model": cfg})
 

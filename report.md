@@ -37,3 +37,41 @@
   - Percent correct: 0.67
   - Reply similarity: 0.63
   
+
+  ## Hierarchy Cards
+
+  embedder : flag_bge 
+
+  - Nb de chunks : 64
+  - MRR : 0.9
+  - Percent correct : 0.4
+  - Reply Simmilarity : 0.64
+
+  embedder : e5_small 
+  
+  - Nb de chunks : 69
+  - MRR : 0.3
+  - Percent correct : 0.2
+  - Reply Simmilarity : 0.5
+
+
+
+  ## Semantic sentences
+  
+  embedder : flag_bge 
+
+  - Nb de chunks : 64
+  - MRR : 0.4
+  - Percent correct : 0.4
+  - Reply Simmilarity : 0.64
+
+  embedder : e5_small 
+  
+  - Nb de chunks : 64
+  - MRR : 0.6
+  - Percent correct : 0.4
+  - Reply Simmilarity : 0.65
+
+
+
+
