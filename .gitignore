@@ -5,3 +5,6 @@ config.yml
 mlruns/
 .env
 .venv
+src_rag_nul/
+src_rag3/
+src_rag2/

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 try:
     from FlagEmbedding import FlagModel
     _FLAG_AVAILABLE = True
-except ModuleNotFoundError:  # pragma: no cover - optionnel
+except ModuleNotFoundError:
     FlagModel = None
     _FLAG_AVAILABLE = False
 from sentence_transformers import SentenceTransformer
@@ -38,26 +38,16 @@ def get_model(config):
 
 
 class RAG:
-    def __init__(
-        self,
-        chunk_size=256,
-        chunk_method="markdown",
-        chunk_kwargs=None,
-        embedder_type="flag_bge",
-        embedder_params=None,
-    ):
-        # chunk_size : taille de découpage des textes (en tokens)
+    def __init__(self, chunk_size=256, chunk_method="markdown", embedder_type="flag_bge"):
         self._chunk_size = chunk_size
         self._chunk_method = chunk_method
-        self._chunk_kwargs = (chunk_kwargs or {}).copy()
         self._embedder_type = embedder_type
-        self._embedder_params = embedder_params or {}
-        self._embedder = None                   # Embedding model (sera chargé à la demande)
-        self._loaded_files = set()              # Fichiers déjà chargés pour éviter le doublon
-        self._texts = []                        # Liste des textes bruts déjà chargés
-        self._chunks = []                       # Liste des chunks de texte découpés
-        self._corpus_embedding = None           # Embeddings du corpus, sous forme de matrice numpy
-        self._client = CLIENT                   # Client OpenAI/Groq utilisé pour la génération
+        self._embedder = None
+        self._loaded_files = set()
+        self._texts = []
+        self._chunks = []
+        self._corpus_embedding = None
+        self._client = CLIENT
 
 
     def load_files(self, filenames):
@@ -100,7 +90,6 @@ class RAG:
 
 
     def embed_questions(self, questions):
-        # Encode une liste de questions en vecteurs d'embedding
         embedder = self.get_embedder()
         if hasattr(embedder, "encode_queries"):
             return embedder.encode_queries(questions)
@@ -108,18 +97,14 @@ class RAG:
 
 
     def _compute_chunks(self, texts):
-        # Découpe chaque texte en chunks de taille fixée (en tokens) et retourne la liste (applati)
         builder = CHUNK_BUILDERS.get(self._chunk_method, chunk_markdown)
-        kwargs = {"chunk_size": self._chunk_size}
-        kwargs.update(self._chunk_kwargs)
         return sum(
-            (builder(txt, **kwargs) for txt in texts),
+            (builder(txt, chunk_size=self._chunk_size) for txt in texts),
             [],
         )
 
 
     def embed_corpus(self, chunks):
-        # Encode une liste de chunks en embeddings
         if not chunks:
             return None
         embedder = self.get_embedder()
@@ -129,35 +114,18 @@ class RAG:
 
 
     def get_embedder(self):
-        # Instancie un modèle de vectorisation si nécessaire (FlagEmbedding)
         if self._embedder:
             return self._embedder
-
         if self._embedder_type == "e5_small":
-            params = {"model_name": "intfloat/multilingual-e5-small"}
-            params.update(self._embedder_params)
-            self._embedder = _E5Embedder(**params)
+            self._embedder = _E5Embedder("intfloat/multilingual-e5-small")
+        elif _FLAG_AVAILABLE:
+            self._embedder = FlagModel(
+                'BAAI/bge-base-en-v1.5',
+                query_instruction_for_retrieval="Represent this sentence for searching relevant passages:",
+                use_fp16=True,
+            )
         else:
-            params = {
-                "model_name": "BAAI/bge-base-en-v1.5",
-                "query_instruction_for_retrieval": "Represent this sentence for searching relevant passages:",
-                "use_fp16": True,
-            }
-            params.update(self._embedder_params)
-            model_name = params.pop("model_name")
-            query_instruction = params.pop("query_instruction_for_retrieval", None)
-            if not _FLAG_AVAILABLE:
-                print("[RAG] FlagEmbedding indisponible, bascule automatique sur e5_small.")
-                fallback_params = {"model_name": "intfloat/multilingual-e5-small"}
-                fallback_params.update(self._embedder_params)
-                self._embedder = _E5Embedder(**fallback_params)
-            else:
-                self._embedder = FlagModel(
-                    model_name,
-                    query_instruction_for_retrieval=query_instruction,
-                    **params,
-                )
-
+            self._embedder = _E5Embedder("intfloat/multilingual-e5-small")
         return self._embedder
 
 
@@ -248,26 +216,27 @@ def chunk_markdown(md_text: str, chunk_size: int = 128, overlap: int = 40) -> li
         i = 0
 
         while i < len(tokens):
-            # Calculate end index ensuring we don't exceed the total number of tokens
             end = min(i + chunk_size, len(tokens))
             token_chunk = tokens[i:end]
             chunk_text = tokenizer.decode(token_chunk)
             chunks.append(chunk_text)
 
-            # Move chunk start forward (chunk_size - overlap) each time for overlap
             if end == len(tokens):
-                break  # Avoid duplicating last bit if at end
-            i += chunk_size - overlap  # In tokens
+                break
+            i += chunk_size - overlap
 
     return chunks
 
 
-def chunk_markdown_hierarchy(
-    md_text: str,
-    chunk_size: int = 256,
-    overlap: int = 80,
-    min_sentences: int = 2,
-) -> list[str]:
+def _split_sentences(text: str) -> list[str]:
+    text = text.strip()
+    if not text:
+        return []
+    parts = re.split(r"(?<=[\.!?])\s+", text)
+    return [part.strip() for part in parts if part.strip()]
+
+
+def chunk_markdown_hierarchy(md_text: str, chunk_size: int = 256, overlap: int = 80) -> list[str]:
     sections = parse_markdown_sections(md_text)
     chunks: list[str] = []
     
@@ -300,119 +269,7 @@ def chunk_markdown_hierarchy(
     return list(dict.fromkeys(chunks))
 
 
-def chunk_coarse_to_fine(
-    md_text: str,
-    chunk_size: int = 320,
-    overlap: int = 60,
-    micro_size: int = 80,
-    micro_overlap: int = 20,
-) -> list[str]:
-    tokens = tokenizer.encode(md_text)
-    if not tokens:
-        return []
-
-    step = max(chunk_size - overlap, 1)
-    chunks: list[str] = []
-    macro_meta: list[tuple[int, str]] = []
-    start = 0
-    macro_id = 0
-
-    while start < len(tokens):
-        end = min(start + chunk_size, len(tokens))
-        macro_text = tokenizer.decode(tokens[start:end]).strip()
-        if macro_text:
-            chunks.append(f"[macro:{macro_id}]\n{macro_text}")
-            macro_meta.append((macro_id, macro_text))
-        macro_id += 1
-        if end == len(tokens):
-            break
-        start += step
-
-    for macro_id, macro_text in macro_meta:
-        sentences = _split_sentences(macro_text)
-        if not sentences:
-            continue
-        for window in _windows_from_sentences(sentences, micro_size, micro_overlap):
-            chunks.append(f"[micro:{macro_id}]\n{window}")
-
-    return chunks
-
-
-def _split_sentences(text: str) -> list[str]:
-    text = text.strip()
-    if not text:
-        return []
-    parts = re.split(r"(?<=[\.!?])\s+", text)
-    return [part.strip() for part in parts if part.strip()]
-
-
-def _windows_from_sentences(
-    sentences: list[str],
-    chunk_size: int,
-    overlap: int,
-) -> list[str]:
-    if chunk_size <= 0:
-        return []
-
-    keep_tokens = min(overlap, chunk_size - 1) if chunk_size > 1 else 0
-    chunks: list[str] = []
-    buffer: list[str] = []
-    lengths: list[int] = []
-    token_total = 0
-
-    for sentence in sentences:
-        clean = sentence.strip()
-        if not clean:
-            continue
-
-        sent_tokens = len(tokenizer.encode(clean))
-        if sent_tokens >= chunk_size:
-            chunks.append(clean)
-            continue
-
-        if buffer and token_total + sent_tokens > chunk_size:
-            chunks.append(" ".join(buffer))
-            while lengths and token_total > keep_tokens:
-                token_total -= lengths.pop(0)
-                buffer.pop(0)
-
-        buffer.append(clean)
-        lengths.append(sent_tokens)
-        token_total += sent_tokens
-
-    if buffer:
-        chunks.append(" ".join(buffer))
-
-    return chunks
-
-
-class _E5Embedder:
-    def __init__(self, model_name="intfloat/multilingual-e5-small", normalize_embeddings=True, **kwargs):
-        self._model = SentenceTransformer(model_name, **kwargs)
-        self._normalize = normalize_embeddings
-
-    def encode_queries(self, texts: list[str]):
-        formatted = [f"query: {txt}" for txt in texts]
-        return self._encode(formatted)
-
-    def encode_passages(self, texts: list[str]):
-        formatted = [f"passage: {txt}" for txt in texts]
-        return self._encode(formatted)
-
-    def _encode(self, texts: list[str]):
-        return self._model.encode(
-            texts,
-            convert_to_numpy=True,
-            normalize_embeddings=self._normalize,
-        )
-
-
-def chunk_semantic_sentences(
-    md_text: str,
-    chunk_size: int = 200,
-    overlap: int = 0,
-    max_sentences_per_chunk: int = 2,
-) -> list[str]:
+def chunk_semantic_sentences(md_text: str, chunk_size: int = 200, overlap: int = 0) -> list[str]:
     sections = parse_markdown_sections(md_text)
     chunks: list[str] = []
 
@@ -453,9 +310,25 @@ def chunk_semantic_sentences(
     return list(dict.fromkeys(chunks))
 
 
+class _E5Embedder:
+    def __init__(self, model_name="intfloat/multilingual-e5-small", normalize_embeddings=True):
+        self._model = SentenceTransformer(model_name)
+        self._normalize = normalize_embeddings
+
+    def encode_queries(self, texts: list[str]):
+        formatted = [f"query: {txt}" for txt in texts]
+        return self._encode(formatted)
+
+    def encode_passages(self, texts: list[str]):
+        formatted = [f"passage: {txt}" for txt in texts]
+        return self._encode(formatted)
+
+    def _encode(self, texts: list[str]):
+        return self._model.encode(texts, convert_to_numpy=True, normalize_embeddings=self._normalize)
+
+
 CHUNK_BUILDERS = {
     "markdown": chunk_markdown,
     "hierarchy_cards": chunk_markdown_hierarchy,
-    "coarse_to_fine": chunk_coarse_to_fine,
     "semantic_sentences": chunk_semantic_sentences,
 }

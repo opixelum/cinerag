@@ -42,10 +42,10 @@
 
   embedder : flag_bge 
 
-  - Nb de chunks : 64
+  - Nb de chunks : 69
   - MRR : 0.9
   - Percent correct : 0.4
-  - Reply Simmilarity : 0.64
+  - Reply Simmilarity : 0.65
 
   embedder : e5_small 
   
@@ -63,7 +63,7 @@
   - Nb de chunks : 64
   - MRR : 0.4
   - Percent correct : 0.4
-  - Reply Simmilarity : 0.64
+  - Reply Simmilarity : 0.65
 
   embedder : e5_small 
   
