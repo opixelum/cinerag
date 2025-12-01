@@ -225,11 +225,18 @@ def run_full_evaluation(config):
 
 if __name__ == "__main__":
     CONFIGS = [
-        {"chunk_method": "markdown", "chunk_size": 256, "embedder_type": "flag_bge"},
-        {"chunk_method": "hierarchy_cards", "chunk_size": 256, "embedder_type": "flag_bge"},
-        {"chunk_method": "semantic_sentences", "chunk_size": 200, "embedder_type": "flag_bge"},
-        {"chunk_method": "hierarchy_cards", "chunk_size": 256, "embedder_type": "e5_small"},
-        {"chunk_method": "semantic_sentences", "chunk_size": 200, "embedder_type": "e5_small"},
+        {"chunk_method": "markdown", "chunk_size": 347, "embedder_type": "flag_bge", "small_window": 0},
+        {"chunk_method": "markdown", "chunk_size": 360, "embedder_type": "flag_bge", "small_window": 1},
+        {"chunk_method": "hierarchy_cards", "chunk_size": 256, "embedder_type": "flag_bge", "small_window": 0},
+        {"chunk_method": "hierarchy_cards", "chunk_size": 256, "embedder_type": "flag_bge", "small_window": 1},
+        {"chunk_method": "semantic_sentences", "chunk_size": 200, "embedder_type": "flag_bge", "small_window": 0},
+        {"chunk_method": "semantic_sentences", "chunk_size": 200, "embedder_type": "flag_bge", "small_window": 1},
+        {"chunk_method": "markdown", "chunk_size": 347, "embedder_type": "e5_small", "small_window": 0},
+        {"chunk_method": "markdown", "chunk_size": 360, "embedder_type": "e5_small", "small_window": 1},
+        {"chunk_method": "hierarchy_cards", "chunk_size": 256, "embedder_type": "e5_small", "small_window": 0},
+        {"chunk_method": "hierarchy_cards", "chunk_size": 256, "embedder_type": "e5_small", "small_window": 1},
+        {"chunk_method": "semantic_sentences", "chunk_size": 200, "embedder_type": "e5_small", "small_window": 0},
+        {"chunk_method": "semantic_sentences", "chunk_size": 200, "embedder_type": "e5_small", "small_window": 1},
     ]
     for cfg in CONFIGS:
         print(f"\n=== {cfg} ===")

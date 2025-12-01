@@ -38,7 +38,7 @@ def get_model(config):
 
 
 class RAG:
-    def __init__(self, chunk_size=256, chunk_method="markdown", embedder_type="flag_bge"):
+    def __init__(self, chunk_size=256, chunk_method="markdown", embedder_type="flag_bge", small_window=1):
         self._chunk_size = chunk_size
         self._chunk_method = chunk_method
         self._embedder_type = embedder_type
@@ -48,6 +48,7 @@ class RAG:
         self._chunks = []
         self._corpus_embedding = None
         self._client = CLIENT
+        self._small_window = small_window
 
 
     def load_files(self, filenames):
@@ -153,12 +154,23 @@ class RAG:
         Query: {query}
         Answer:"""
 
+
+    def small2big(self, chunks, idx, window=1):
+        start = max(0, idx - window)
+        end = min(len(chunks), idx + window + 1)
+        return "\n\n".join(chunks[start:end])
+
     def _get_context(self, query):
-        # Sélectionne les 5 chunks de contexte les plus similaires à la question (cosine similarity)
         query_embedding = self.embed_questions([query])
         sim_scores = query_embedding @ self._corpus_embedding.T
-        indexes = list(np.argsort(sim_scores[0]))[-5:]  # Top 5 plus proches
+        indexes = list(np.argsort(sim_scores[0]))[-5:]
+        if self._small_window:
+            return [self.small2big(self._chunks, idx, window=self._small_window) for idx in indexes]
         return [self._chunks[i] for i in indexes]
+
+    
+
+    
     
 
 def count_tokens(text: str) -> int:
